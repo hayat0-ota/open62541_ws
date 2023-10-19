@@ -1,0 +1,4 @@
+[submodule "deps/open62541"]
+	path = deps/open62541
+	url = git@github.com:open62541/open62541.git
+	branch = 086b1557d6f49e8a82c999054a7da77d080cd54e

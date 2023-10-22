@@ -1,18 +1,8 @@
 ﻿/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
  * See http://creativecommons.org/publicdomain/zero/1.0/ for more information. */
 
- /**
-  * Adding Variables to a Server
-  * ----------------------------
-  *
-  * This tutorial shows how to work with data types and how to add variable nodes
-  * to a server. First, we add a new variable to the server. Take a look at the
-  * definition of the ``UA_VariableAttributes`` structure to see the list of all
-  * attributes defined for VariableNodes.
-  *
-  * Note that the default settings have the AccessLevel of the variable value as
-  * read only. See below for making the variable writable.
-  */
+// NodeIdについてはこのページで学習できる
+// https://documentation.unified-automation.com/uasdkhp/1.4.1/html/_l2_ua_node_ids.html
 
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/server.h>
@@ -21,11 +11,16 @@
 #include <signal.h>
 #include <stdlib.h>
 
-static void
-addVariable(UA_Server* server) {
+
+
+/// <summary>
+/// OPC-UAサーバーに変数を追加する
+/// </summary>
+/// <param name="server"></param>
+static void addVariable(UA_Server* server) {
     /* Define the attribute of the myInteger variable node */
     UA_VariableAttributes attr = UA_VariableAttributes_default;
-    UA_Int32 myInteger = 42;
+    UA_Int32 myInteger = 42;    // 初期値の設定
     UA_Variant_setScalar(&attr.value, &myInteger, &UA_TYPES[UA_TYPES_INT32]);
     attr.description = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"the answer");
     attr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"the answer");
@@ -33,30 +28,37 @@ addVariable(UA_Server* server) {
     attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
 
     /* Add the variable node to the information model */
-    UA_NodeId myIntegerNodeId = UA_NODEID_STRING(1, (char*)"the.answer");
-    UA_QualifiedName myIntegerName = UA_QUALIFIEDNAME(1, (char*)"the answer");
-    UA_NodeId parentNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
-    UA_NodeId parentReferenceNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
+    // Variable Nodeを情報モデルに追加する
+    UA_NodeId myIntegerNodeId = UA_NODEID_STRING(1, (char*)"the.answer");   // 
+    UA_QualifiedName myIntegerName = UA_QUALIFIEDNAME(1, (char*)"the answer");  // 
+    UA_NodeId parentNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);  // 親ノードのID
+    UA_NodeId parentReferenceNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES); // 親参照ノードID
+
+    // VariableNodeをServerに追加する
     UA_Server_addVariableNode(server, myIntegerNodeId, parentNodeId,
         parentReferenceNodeId, myIntegerName,
         UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), attr, NULL, NULL);
 }
 
-static void
-addMatrixVariable(UA_Server* server) {
-    UA_VariableAttributes attr = UA_VariableAttributes_default;
-    attr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Double Matrix");
-    attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
 
-    /* Set the variable value constraints */
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="server"></param>
+static void addMatrixVariable(UA_Server* server) {
+    UA_VariableAttributes attr = UA_VariableAttributes_default;
+    attr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Double Matrix");    // 表示名設定
+    attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;  // R/W属性設定
+
+    // 変数設定
     attr.dataType = UA_TYPES[UA_TYPES_DOUBLE].typeId;
     attr.valueRank = UA_VALUERANK_TWO_DIMENSIONS;
     UA_UInt32 arrayDims[2] = { 2,2 };
     attr.arrayDimensions = arrayDims;
     attr.arrayDimensionsSize = 2;
 
-    /* Set the value. The array dimensions need to be the same for the value. */
-    UA_Double zero[4] = { 0.0, 0.0, 0.0, 0.0 };
+    UA_Double zero[4] = { 0.0, 1.0, 1.3, 2.0 };
     UA_Variant_setArray(&attr.value, zero, 4, &UA_TYPES[UA_TYPES_DOUBLE]);
     attr.value.arrayDimensions = arrayDims;
     attr.value.arrayDimensionsSize = 2;
@@ -71,13 +73,12 @@ addMatrixVariable(UA_Server* server) {
         attr, NULL, NULL);
 }
 
-/**
- * Now we change the value with the write service. This uses the same service
- * implementation that can also be reached over the network by an OPC UA client.
- */
 
-static void
-writeVariable(UA_Server* server) {
+/// <summary>
+/// サーバ内部で値を書き換える
+/// </summary>
+/// <param name="server"></param>
+static void writeVariable(UA_Server* server) {
     UA_NodeId myIntegerNodeId = UA_NODEID_STRING(1, (char*)"the.answer");
 
     /* Write a different integer value */
@@ -106,15 +107,13 @@ writeVariable(UA_Server* server) {
     UA_Server_write(server, &wv);
 }
 
-/**
- * Note how we initially set the DataType attribute of the variable node to the
- * NodeId of the Int32 data type. This forbids writing values that are not an
- * Int32. The following code shows how this consistency check is performed for
- * every write.
- */
 
-static void
-writeWrongVariable(UA_Server* server) {
+
+/// <summary>
+/// 故意にint型のNodeにstring型の値を書き込んでみる
+/// </summary>
+/// <param name="server"></param>
+static void writeWrongVariable(UA_Server* server) {
     UA_NodeId myIntegerNodeId = UA_NODEID_STRING(1, (char*)"the.answer");
 
     /* Write a string */
@@ -126,7 +125,101 @@ writeWrongVariable(UA_Server* server) {
     printf("Writing a string returned statuscode %s\n", UA_StatusCode_name(retval));
 }
 
-/** It follows the main server code, making use of the above definitions. */
+
+/// <summary>
+/// Method実行時のコールバック関数
+/// </summary>
+/// <param name="server"></param>
+/// <param name="sessionId"></param>
+/// <param name="sessionContext"></param>
+/// <param name="methodId"></param>
+/// <param name="methodContext"></param>
+/// <param name="objectId"></param>
+/// <param name="objectContext"></param>
+/// <param name="inputSize"></param>
+/// <param name="input"></param>
+/// <param name="outputSize"></param>
+/// <param name="output"></param>
+/// <returns></returns>
+static UA_StatusCode IncInt32ArrayMethodCallback(UA_Server* server,
+    const UA_NodeId* sessionId, void* sessionContext,
+    const UA_NodeId* methodId, void* methodContext,
+    const UA_NodeId* objectId, void* objectContext,
+    size_t inputSize, const UA_Variant* input,
+    size_t outputSize, UA_Variant* output) 
+{
+    UA_Int32* inputArray = (UA_Int32*)input[0].data;
+    UA_Int32 delta = *(UA_Int32*)input[1].data;
+
+    // Copy the input array
+    UA_StatusCode retval = UA_Variant_setArrayCopy(output, inputArray, 5, &UA_TYPES[UA_TYPES_INT32]);
+
+    if (retval != UA_STATUSCODE_GOOD) {
+        return retval;
+    }
+
+    // Methodの第二引数deltaだけ第一引数の配列要素に加算する
+    UA_Int32* outputArray = (UA_Int32*)output->data;
+    for (size_t i = 0; i < input->arrayLength; i++) {
+        outputArray[i] = inputArray[i] + delta;
+    }
+
+    return UA_STATUSCODE_GOOD;
+
+}
+
+
+/// <summary>
+/// ClientからコールされるMethod
+/// </summary>
+/// <param name="server"></param>
+static void addIncInt32ArrayMethod(UA_Server* server) {
+    // 2つの引数
+    UA_Argument inputArguments[2];   // 引数配列
+    
+    // 第1引数の設定
+    UA_Argument_init(&inputArguments[0]);
+    inputArguments[0].description = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"int32[5] array");
+    inputArguments[0].name = UA_STRING((char*)"int32[5] array");
+    inputArguments[0].dataType = UA_TYPES[UA_TYPES_INT32].typeId;
+    inputArguments[0].valueRank = UA_VALUERANK_ONE_DIMENSION;
+    UA_UInt32 pInputDimension = 5;
+    inputArguments[0].arrayDimensionsSize = 1;
+    inputArguments[0].arrayDimensions = &pInputDimension;
+
+    // 第2引数の設定
+    UA_Argument_init(&inputArguments[1]);
+    inputArguments[1].description = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"int32 delta");
+    inputArguments[1].name = UA_STRING((char*)"int32 delta");
+    inputArguments[1].dataType = UA_TYPES[UA_TYPES_INT32].typeId;
+    inputArguments[1].valueRank = UA_VALUERANK_SCALAR;
+
+    // 戻り値の設定
+    UA_Argument outputArgument;
+    UA_Argument_init(&outputArgument);
+    outputArgument.description = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"int32[5] array");
+    outputArgument.name = UA_STRING((char*)"each entry is incremented by the delta");
+    outputArgument.dataType = UA_TYPES[UA_TYPES_INT32].typeId;
+    outputArgument.valueRank = UA_VALUERANK_ONE_DIMENSION;
+    UA_UInt32 pOutputDimension = 5;
+    outputArgument.arrayDimensionsSize = 1;
+    outputArgument.arrayDimensions = &pOutputDimension;
+
+    // Methodノードの追加
+    UA_MethodAttributes incAttr = UA_MethodAttributes_default;
+    incAttr.description = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"IncInt32ArrayValues");
+    incAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"IncInt32ArrayValues");
+    incAttr.executable = true;
+    incAttr.userExecutable = true;
+    UA_Server_addMethodNode(server, UA_NODEID_STRING(1, (char*)"IncInt32ArrayValues"),
+        UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
+        UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+        UA_QUALIFIEDNAME(1, (char*)"IncInt32ArrayValues"),
+        incAttr, &IncInt32ArrayMethodCallback,
+        2, inputArguments, 1, &outputArgument,
+        NULL, NULL);
+}
+
 
 static volatile UA_Boolean running = true;
 static void stopHandler(int sign) {
@@ -134,6 +227,13 @@ static void stopHandler(int sign) {
     running = false;
 }
 
+
+
+/// <summary>
+/// メイン関数
+/// </summary>
+/// <param name=""></param>
+/// <returns></returns>
 int main(void) {
     signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
@@ -148,6 +248,7 @@ int main(void) {
 
     addVariable(server);
     addMatrixVariable(server);
+    // addDoubleMatrixMethod(server)
     writeVariable(server);
     writeWrongVariable(server);
 

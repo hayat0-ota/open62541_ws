@@ -2,11 +2,10 @@
 下記の2つのノードにアクセスするクライアント
     - 変数 ... SampleVariable : int
     - 関数 ... IncreaseVariable(int) : int
-
-
 */
 
 #include <iostream>
+#include <cstdio>
 #include <open62541/client_config_default.h>
 #include <open62541/client_highlevel.h>
 #include <open62541/plugin/log_stdout.h>
@@ -25,10 +24,10 @@ void readSampleVariable(UA_Client* client) {
         var->type == &UA_TYPES[UA_TYPES_INT32])
     {
         value = *(UA_Int32*)var->data;
-        printf("the value of SampleVariable: %d\n", value);
+        printf("the value of SampleVariable: %d\n\n", value);
     }
     else {
-        printf("Failed to read SampleVariable\n");
+        printf("Failed to read SampleVariable\n\n");
     }
 }
 
@@ -44,7 +43,7 @@ UA_StatusCode writeSampleVariable(UA_Client* client, UA_Int32 newValue) {
     UA_StatusCode retval = UA_Client_writeValueAttribute(client, UA_NODEID_STRING(1, (char*)"SampleVarNodeId"), &newValueVariant);
 
     if (retval != UA_STATUSCODE_GOOD) {
-        printf("Failed to write sample variable value, returned %x\n", retval);
+        printf("Failed to write sample variable value, returned %x\n\n", retval);
     }
     return retval;
 }
@@ -77,16 +76,19 @@ void invokeMethod(UA_Client* client) {
     );
 
     if (retval == UA_STATUSCODE_GOOD) {
-        printf("Method call was successful, and %lu returned values available.\n", (unsigned long)outputSize);
+        printf("Method call was successful, and %lu returned values available.\n\n", (unsigned long)outputSize);
         UA_Array_delete(output, outputSize, &UA_TYPES[UA_TYPES_VARIANT]);
     }
     else {
-        printf("Method call was unsuccessful, and %x returned values available.\n", retval);
+        printf("Method call was unsuccessful, and %x returned values available.\n\n", retval);
     }
     UA_Variant_clear(&input);
 }
 
 
+/// <summary>
+/// メイン関数
+/// </summary>
 int main()
 {
     // クライアントインスタンスの生成
@@ -101,24 +103,27 @@ int main()
         return 0;
     }
 
-    // 変数の値を読みだす
-    printf("readSampleVariable()\n");
+    // 変数の現在の値を読み出す
+    printf("Press any key to Read Sample Variable ...");
+    std::cin.get();
     readSampleVariable(client); // 値を取得する
 
-    // 変数の値を書き込む
-    printf("=== writeSampleVariable() ===\n");
-    writeSampleVariable(client, -1);
-    readSampleVariable(client); // 結果を出力する
+    // 任意の値を書き込む
+    printf("Press any key to Write Sample Variable ...");
+    std::cin.get();
+    int targetValue = -1;
+    writeSampleVariable(client, targetValue);
+    readSampleVariable(client); // 書き込んだ結果を出力する
 
     // 関数にアクセスする
-    printf("=== invokeMethod() ===\n");
+    printf("Press any key to invoke method ...");
+    std::cin.get();
     invokeMethod(client);
     readSampleVariable(client); // 結果を出力する
 
 
-    printf("Press any key to continue ...");
-    char* str = (char*)"";
-    std::cin >> str;
+    printf("Press any key to exit ...");
+    std::cin.get();
 
     return EXIT_SUCCESS;
 }

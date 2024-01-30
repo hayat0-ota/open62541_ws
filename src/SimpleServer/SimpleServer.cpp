@@ -1,16 +1,9 @@
-﻿/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information. */
-
-
-// NodeIdについてはこのページで学習できる
-// https://documentation.unified-automation.com/uasdkhp/1.4.1/html/_l2_ua_node_ids.html
-
-#include <open62541/plugin/log_stdout.h>
+﻿#include <open62541/plugin/log_stdout.h>
 #include <open62541/server.h>
 #include <open62541/server_config_default.h>
 
-#include <signal.h>
-#include <stdlib.h>
+#include <csignal>
+#include <cstdlib>
 
 
 /// <summary>
@@ -31,13 +24,20 @@ static void addSampleVariable(UA_Server* server) {
     // Variable Nodeを情報モデルに追加する
     UA_NodeId sampleVarNodeId = UA_NODEID_STRING(1, (char*)"SampleVarNodeId");  // ノードIDの定義
     UA_QualifiedName sampleVarName = UA_QUALIFIEDNAME(1, (char*)"SampleVar");   // ブラウザ名の定義
-    UA_NodeId parentNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);      // 親ノードのID  // [ToDo]ここのインデックスを変えると位置が変わる
+    UA_NodeId parentNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);      // 親ノードのID
     UA_NodeId parentReferenceNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES); // 親参照ノードID
 
     // 定義したVariableNodeをServerに追加する
     UA_Server_addVariableNode(server, sampleVarNodeId, parentNodeId,
         parentReferenceNodeId, sampleVarName,
         UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), attr, NULL, NULL);
+
+    // メモリ解放
+    UA_VariableAttributes_delete(&attr);
+    UA_NodeId_delete(&sampleVarNodeId);
+    UA_NodeId_delete(&parentNodeId);
+    UA_NodeId_delete(&parentReferenceNodeId);
+    UA_QualifiedName_delete(&sampleVarName);
 }
 
 
@@ -70,11 +70,11 @@ static UA_StatusCode increaseVariableCallback(UA_Server* server,
     // 加算後の値をServerに書き込む
     UA_StatusCode retval = UA_Server_writeValue(server, sampleVarNodeId, newVar);
 
-    if (retval != UA_STATUSCODE_GOOD) {
-        return retval;
-    }
+    // メモリ解放
+    UA_Variant_delete(&sampleVar);
+    UA_Variant_delete(&newVar);
 
-    return UA_STATUSCODE_GOOD;
+    return retval;
 }
 
 
@@ -82,7 +82,6 @@ static UA_StatusCode increaseVariableCallback(UA_Server* server,
 /// <summary>
 /// 新規にメソッド をOPC-UAサーバに追加する
 /// </summary>
-/// <param name="server"></param>
 static void addIncreaseVariableMethod(UA_Server* server) {
     // 入力引数の生成
     UA_Argument inputArg;
@@ -95,24 +94,31 @@ static void addIncreaseVariableMethod(UA_Server* server) {
     inputArg.valueRank = UA_VALUERANK_SCALAR;
 
     // Methodノードの追加
-    UA_MethodAttributes incAttr = UA_MethodAttributes_default;
-    incAttr.description = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Increase the value of a variable by the number of arguments");
-    incAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"IncreaseVariable");
-    incAttr.executable = true;
-    incAttr.userExecutable = true;
+    UA_MethodAttributes methodAttr = UA_MethodAttributes_default;
+    methodAttr.description = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Increase the value of a variable by the number of arguments");
+    methodAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"IncreaseVariable");
+    methodAttr.executable = true;
+    methodAttr.userExecutable = true;
     UA_Server_addMethodNode(server, UA_NODEID_STRING(1, (char*)"addIncreaseVarNodeId"),
         UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
         UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
         UA_QUALIFIEDNAME(1, (char*)"IncreaseVariable"),
-        incAttr, &increaseVariableCallback,
+        methodAttr, &increaseVariableCallback,
         1, &inputArg, 0, NULL,
         NULL, NULL);
+
+    // メモリ解放
+    UA_Argument_delete(&inputArg);
+    UA_MethodAttributes_delete(&methodAttr);
 }
 
 
 
 static volatile UA_Boolean running = true;
 
+/// <summary>
+/// 中止シグナルハンドラ
+/// </summary>
 static void stopHandler(int sign) {
     UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "received ctrl-c");
     running = false;
@@ -121,8 +127,6 @@ static void stopHandler(int sign) {
 /// <summary>
 /// メイン関数
 /// </summary>
-/// <param name=""></param>
-/// <returns></returns>
 int main(void) {
     signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);

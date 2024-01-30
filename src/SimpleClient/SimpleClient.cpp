@@ -18,7 +18,8 @@
 void readSampleVariable(UA_Client* client) {
     UA_Int32 value = 0;
     UA_Variant* var = UA_Variant_new();
-    UA_StatusCode retval = UA_Client_readValueAttribute(client, UA_NODEID_STRING(1, (char*)"SampleVarNodeId"), var);    // NodeIdを指定する
+    UA_NodeId nodeId = UA_NODEID_STRING(1, (char*)"SampleVarNodeId");
+    UA_StatusCode retval = UA_Client_readValueAttribute(client, nodeId, var);
     
     if (retval == UA_STATUSCODE_GOOD && UA_Variant_isScalar(var) &&
         var->type == &UA_TYPES[UA_TYPES_INT32])
@@ -29,6 +30,10 @@ void readSampleVariable(UA_Client* client) {
     else {
         printf("Failed to read SampleVariable\n\n");
     }
+
+    // メモリ解放
+    UA_Variant_delete(var);
+    UA_NodeId_delete(&nodeId);
 }
 
 
@@ -40,11 +45,17 @@ void readSampleVariable(UA_Client* client) {
 UA_StatusCode writeSampleVariable(UA_Client* client, UA_Int32 newValue) {
     UA_Variant newValueVariant;
     UA_Variant_setScalar(&newValueVariant, &newValue, &UA_TYPES[UA_TYPES_INT32]);
-    UA_StatusCode retval = UA_Client_writeValueAttribute(client, UA_NODEID_STRING(1, (char*)"SampleVarNodeId"), &newValueVariant);
+    UA_NodeId nodeId = UA_NODEID_STRING(1, (char*)"SampleVarNodeId");
+    UA_StatusCode retval = UA_Client_writeValueAttribute(client, nodeId, &newValueVariant);
 
     if (retval != UA_STATUSCODE_GOOD) {
         printf("Failed to write sample variable value, returned %x\n\n", retval);
     }
+
+    // メモリ解放
+    UA_Variant_delete(&newValueVariant);
+    UA_NodeId_delete(&nodeId);
+
     return retval;
 }
 
@@ -82,7 +93,9 @@ void invokeMethod(UA_Client* client) {
     else {
         printf("Method call was unsuccessful, and %x returned values available.\n\n", retval);
     }
-    UA_Variant_clear(&input);
+
+    // メモリ解放
+    UA_Variant_delete(&input);
 }
 
 
